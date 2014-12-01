@@ -2,6 +2,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -16,30 +17,31 @@ public class Driver {
 	List<String>dictionary;
 	private static final String DICTIONARY_FILENAME="500-worst-passwords.txt";
 	List<AccountDetails> accounts = new ArrayList<AccountDetails>();
-	MessageDigest SHA512Hash;
 	Map<String, String> userPassMap = new HashMap<String, String>(); // map (user, pass)
 	
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
 		Driver driver=new Driver();
 		
-		try {
-			driver.SHA512Hash = MessageDigest.getInstance("SHA-512");
-		}
-		catch (Exception e) {
-			e.printStackTrace();
-		}
-		
+		// ask for file inputs for passwd file, shadow file and dictionary file
 		driver.getRawData();
 		driver.loadDictionary(DICTIONARY_FILENAME);
+		
+		Collections.reverse(driver.dictionary);
+		
+		System.out.println("Timer start!\n");
+		Timer.startTimer();
+		
 		driver.crackPasswords();
 		driver.displayResults();
+		
+		System.out.println("\nTotal time: " + Timer.stopTimer() + "ms");
 	}
 	
 	private void displayResults() {
 		int c = 1;
 		
-		System.out.println("Accounts taken: " + userPassMap.entrySet().size());
+		System.out.println("Accounts found: " + userPassMap.entrySet().size());
 		for (Entry<String, String> n : userPassMap.entrySet()) {
 			System.out.println("Enum " + c++);
 			System.out.println("Username: " + n.getKey());
@@ -53,24 +55,18 @@ public class Driver {
 		List<String> passwdEntries=readLinesFromFile("files/passwd");
 		for(String entry:passwdEntries )//each entry in passwd
 		{
-				//System.out.println(entry);
 				String [] parts=entry.split(":");
 				if(Integer.parseInt(parts[2])>1000)
 					usernames.add(parts[0]);
 		}
 		
 		List<String> shadowEntries=readLinesFromFile("files/shadow");//or are we not supposed to see the hashes?
-		
 		for(String entry:shadowEntries )
 		{
-			
-	
-				
-				String [] parts=entry.split(":");
-				if (usernames.contains(parts[0])) {
-					if (parts[1].length() > 1)
-						accounts.add(new AccountDetails(parts[0],parts[1]));
-				}
+			String [] parts=entry.split(":");
+			if (usernames.contains(parts[0]))
+				if (parts[1].length() > 1)
+					accounts.add(new AccountDetails(parts[0],parts[1]));
 		}
 	}
 	
@@ -79,17 +75,16 @@ public class Driver {
 		ArrayList<String> lines = new ArrayList<String>();
 		Scanner s=null;
 		try {
-			
-			s = new Scanner(new File(filepath)).useDelimiter(System.getProperty("line.separator"));
+			s = new Scanner(new File(filepath));//.useDelimiter(System.getProperty("line.separator"));
 		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
-		while (s.hasNext()){
-			String next=s.next();
+		while (s.hasNextLine()){
+			String next=s.nextLine();
 			//next=next.substring(0, next.indexOf('\n'));
-		    lines.add(next);
+			if (next.trim().length() != 0)
+				lines.add(next);
 		}
 		s.close();
 		return lines;
@@ -102,8 +97,6 @@ public class Driver {
 	
 	public void crackPasswords() {
 		for (AccountDetails a : accounts) {
-			//String password = a.findPass(dictionary, SHA512Hash);
-			
 			String password=a.findPass(dictionary);
 			if (password != null)
 				userPassMap.put(a.username, password);
@@ -124,53 +117,20 @@ class AccountDetails {
 		hashword = parts[3];
 	}
 	
-	
 	public String findPass(List<String> dictionary) {
 		for (String d : dictionary) {
 			String testHash=Sha512Crypt.Sha512_crypt(d,salt,0);
-			//System.out.println(testHash);
-			/*hasher.update((d+salt).getBytes());
 			
-			byte[] arr = hasher.digest();
-			StringBuffer sb = new StringBuffer();
-			
-			for (byte b : arr) {
-				sb.append(Integer.toHexString(0xff & b));
-			}
-			
-			System.out.print("(" + arr.length + ", ");
-			System.out.println(hashword.length() + ")");*/
 			String[]splitHash=testHash.split("\\$");
+			
 			if (hashword.equals(splitHash[3]))
 				return d;
 		}
 		
 		return null;
 	}
-	/*public String findPass(List<String> dictionary, MessageDigest md) {
-		for (String d : dictionary) {
-			md.update((d+salt).getBytes());
-			
-			byte[] arr = md.digest();
-			StringBuffer sb = new StringBuffer();
-			
-			for (byte b : arr) {
-				sb.append(Integer.toHexString(0xff & b));
-			}
-			
-			System.out.print("(" + arr.length + ", ");
-			System.out.println(hashword.length() + ")");
-			
-			if (hashword.equals(sb.toString()))
-				return d;
-		}
-		
-		return null;
-	}*/
-
 
 	public String toString() {
 		return username + " - " + salt + " - " + hashword;
 	}
-	
 }
