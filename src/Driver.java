@@ -1,9 +1,11 @@
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Scanner;
 
 
@@ -12,20 +14,41 @@ public class Driver {
 	List<String> usernames=new ArrayList<String>();
 	List<String>dictionary;
 	private static final String DICTIONARY_FILENAME="500-worst-passwords.txt";
-	Map<String, String> userWithPassword=new HashMap<String, String>();
+	List<AccountDetails> accounts = new ArrayList<AccountDetails>();
+	MessageDigest SHA512Hash;
+	Map<String, String> userPassMap = new HashMap<String, String>(); // map (user, pass)
+	
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
 		Driver driver=new Driver();
+		
+		try {
+			driver.SHA512Hash = MessageDigest.getInstance("SHA-512");
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+		
 		driver.getRawData();
-		//loadDictionary();
-		//crackPasswords();
-		//displayResults();
-
+		driver.loadDictionary(DICTIONARY_FILENAME);
+		driver.crackPasswords();
+		driver.displayResults();
 	}
+	
+	private void displayResults() {
+		int c = 1;
+		
+		System.out.println("Accounts taken: " + userPassMap.entrySet().size());
+		for (Entry<String, String> n : userPassMap.entrySet()) {
+			System.out.println("Enum " + c++);
+			System.out.println("Username: " + n.getKey());
+			System.out.println("Password: " + n.getValue());
+		}
+		
+	}
+
 	public void getRawData()
 	{
-		dictionary=getDictionary(DICTIONARY_FILENAME);//TODO allow user to specify file name
-		
 		List<String> passwdEntries=readLinesFromFile("files/passwd");
 		for(String entry:passwdEntries )//each entry in passwd
 		{
@@ -47,31 +70,14 @@ public class Driver {
 			{
 				
 				String [] parts=entry.split(":");
-				//System.out.println(entry);
-				//System.out.println(parts[0]);
-				if (usernames.contains(parts[0]))
-					userWithPassword.put(parts[0],parts[1]);
+				if (usernames.contains(parts[0])) {
+					if (parts[1].length() > 1)
+						accounts.add(new AccountDetails(parts[0],parts[1]));
+				}
 			}
-		}
-		for(Map.Entry e: userWithPassword.entrySet())
-		{
-			System.out.println(e.getKey()+":"+e.getValue());
 		}
 	}
 	
-	/*public void parseShadowEntry(String entry)
-	{
-		String [] parts=entry.split(":");
-		String username=parts[0];
-		String passwordhash=parts[1];
-	}*/
-	
-	/*public void parsePasswdEntry(String entry)
-	{
-		String [] parts=entry.split(":");
-		String username=parts[0];
-		String userid=parts[2];
-	}*/
 	public List<String> readLinesFromFile(String filepath)
 	{
 		ArrayList<String> lines = new ArrayList<String>();
@@ -90,17 +96,59 @@ public class Driver {
 		s.close();
 		return lines;
 	}
-	public List<String> getDictionary(String filename)
+	
+	public void loadDictionary(String filename)
 	{
-		return readLinesFromFile("dict/"+filename);
+		dictionary = readLinesFromFile("dict/"+filename);
 	}
 	
-	public void parseHash(String hash)
-	{
-		String[] hashParts=hash.split("$");
-		int algorithmID=Integer.parseInt(hashParts[0]);//or hashParts[1] since the string starts with $?
-		String salt=hashParts[1];
-		String actualHash=hashParts[2];
+	public void crackPasswords() {
+		for (AccountDetails a : accounts) {
+			String password = a.findPass(dictionary, SHA512Hash);
+			if (password != null)
+				userPassMap.put(a.username, password);
+		}
+	}
+}
+
+class AccountDetails {
+	String username;
+	String hashword;
+	String salt;
+	
+	public AccountDetails(String user, String code) {
+		username = user;
+		
+		String[] parts = code.split("\\$");
+		salt = parts[2];
+		hashword = parts[3];
+	}
+	
+	
+	public String findPass(List<String> dictionary, MessageDigest md) {
+		for (String d : dictionary) {
+			md.update((d).getBytes());
+			
+			byte[] arr = md.digest();
+			StringBuffer sb = new StringBuffer();
+			
+			for (byte b : arr) {
+				sb.append(Integer.toHexString(0xff & b));
+			}
+			
+			System.out.print("(" + arr.length + ", ");
+			System.out.println(hashword.length() + ")");
+			
+			if (hashword.equals(sb.toString()))
+				return d;
+		}
+		
+		return null;
+	}
+
+
+	public String toString() {
+		return username + " - " + salt + " - " + hashword;
 	}
 	
 }
