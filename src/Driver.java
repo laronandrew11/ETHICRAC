@@ -15,7 +15,7 @@ public class Driver {
 	
 	List<String> usernames=new ArrayList<String>();
 	List<String>dictionary;
-	private static final String DICTIONARY_FILENAME="500-worst-passwords.txt";
+	//private static final String DICTIONARY_FILENAME="500-worst-passwords.txt";
 	List<AccountDetails> accounts = new ArrayList<AccountDetails>();
 	Map<String, String> userPassMap = new HashMap<String, String>(); // map (user, pass)
 	
@@ -25,7 +25,8 @@ public class Driver {
 		
 		// ask for file inputs for passwd file, shadow file and dictionary file
 		driver.getRawData();
-		driver.loadDictionary(DICTIONARY_FILENAME);
+		
+		//driver.loadDictionary(dictPath);
 		
 		Collections.reverse(driver.dictionary);
 		
@@ -52,7 +53,17 @@ public class Driver {
 
 	public void getRawData()
 	{
-		List<String> passwdEntries=readLinesFromFile("files/passwd");
+		System.out.print("Enter path of passwd file: ");
+		Scanner in=new Scanner(System.in);
+		String passwdPath=in.nextLine();//"files/passwd"
+		System.out.print("Enter path of shadow file: ");
+		String shadowPath=in.nextLine();//"files/shadow"
+		System.out.print("Enter path of dictionary file: ");
+		String dictPath=in.nextLine();//"dict/500-worst-passwords.txt"
+		
+		dictionary = readLinesFromFile(dictPath);
+		
+		List<String> passwdEntries=readLinesFromFile(passwdPath);
 		for(String entry:passwdEntries )//each entry in passwd
 		{
 				String [] parts=entry.split(":");
@@ -60,7 +71,8 @@ public class Driver {
 					usernames.add(parts[0]);
 		}
 		
-		List<String> shadowEntries=readLinesFromFile("files/shadow");//or are we not supposed to see the hashes?
+		
+		List<String> shadowEntries=readLinesFromFile(shadowPath);//or are we not supposed to see the hashes?
 		for(String entry:shadowEntries )
 		{
 			String [] parts=entry.split(":");
