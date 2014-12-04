@@ -10,7 +10,7 @@ import java.util.Map.Entry;
 import java.util.Scanner;
 
 
-public class Driver {
+public class pwdcrckr {
 
 	
 	List<String> usernames=new ArrayList<String>();
@@ -21,14 +21,10 @@ public class Driver {
 	
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
-		Driver driver=new Driver();
+		pwdcrckr driver=new pwdcrckr();
 		
 		// ask for file inputs for passwd file, shadow file and dictionary file
 		driver.getRawData();
-		
-		//driver.loadDictionary(dictPath);
-		
-		Collections.reverse(driver.dictionary);
 		
 		System.out.println("Timer start!\n");
 		Timer.startTimer();
@@ -53,13 +49,26 @@ public class Driver {
 
 	public void getRawData()
 	{
-		System.out.print("Enter path of passwd file: ");
 		Scanner in=new Scanner(System.in);
-		String passwdPath=in.nextLine();//"files/passwd"
-		System.out.print("Enter path of shadow file: ");
-		String shadowPath=in.nextLine();//"files/shadow"
-		System.out.print("Enter path of dictionary file: ");
-		String dictPath=in.nextLine();//"dict/500-worst-passwords.txt"
+		
+		String passwdPath, shadowPath, dictPath;
+		
+		System.out.print("Enter input setting: ");
+		System.out.println("(0 = defaults, 1 = specify input files)");
+		if (in.nextInt() == 0) {
+			passwdPath = "files/passwd";
+			shadowPath = "files/shadow";
+			dictPath = "dict/500-worst-passwords.txt";
+		}
+		else {
+			in.nextLine();
+			System.out.print("Enter absolute filepath of passwd file: ");
+			passwdPath=in.nextLine();
+			System.out.print("Enter absolute filepath of shadow file: ");
+			shadowPath=in.nextLine();
+			System.out.print("Enter absolute filepath of dictionary file: ");
+			dictPath=in.nextLine();
+		}
 		
 		dictionary = readLinesFromFile(dictPath);
 		
@@ -80,6 +89,8 @@ public class Driver {
 				if (parts[1].length() > 1)
 					accounts.add(new AccountDetails(parts[0],parts[1]));
 		}
+		
+		Collections.reverse(dictionary);
 	}
 	
 	public List<String> readLinesFromFile(String filepath)
@@ -117,6 +128,7 @@ public class Driver {
 }
 
 class AccountDetails {
+    //static private final String itoa64 = "./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 	String username;
 	String hashword;
 	String salt;
@@ -131,11 +143,7 @@ class AccountDetails {
 	
 	public String findPass(List<String> dictionary) {
 		for (String d : dictionary) {
-			String testHash=Sha512Crypt.Sha512_crypt(d,salt,0);
-			
-			String[]splitHash=testHash.split("\\$");
-			
-			if (hashword.equals(splitHash[3]))
+			if (Sha512Crypt_Optimized.Sha512_crypt(d,salt,0,hashword))
 				return d;
 		}
 		
